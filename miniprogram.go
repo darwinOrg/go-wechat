@@ -12,8 +12,9 @@ const (
 )
 
 type MiniProgramClient struct {
-	AppID     string `json:"app_id"`
-	AppSecret string `json:"app_secret"`
+	AppID        string
+	AppSecret    string
+	ForceRefresh bool
 }
 
 type UrlLinkParams struct {
@@ -32,8 +33,7 @@ type UrlLinkResponse struct {
 
 func (c *MiniProgramClient) GenerateUrlLink(ctx *dgctx.DgContext, params *UrlLinkParams) (string, error) {
 	dghttp.SetHttpClient(ctx, dghttp.Client11)
-
-	tokenResp, err := getStableAccessToken(ctx, c.AppID, c.AppSecret, false)
+	tokenResp, err := getStableAccessToken(ctx, c.AppID, c.AppSecret, c.ForceRefresh)
 	if err != nil {
 		return "", err
 	}
