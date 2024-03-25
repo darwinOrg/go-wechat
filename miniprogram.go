@@ -23,7 +23,7 @@ type UrlLinkParams struct {
 	ExpireType     ExpireType `json:"expire_type"`
 	ExpireTime     *int64     `json:"expire_time,omitempty"`
 	ExpireInterval *int       `json:"expire_interval,omitempty"`
-	EnvVersion     EnvVersion `json:"envVersion"`
+	EnvVersion     EnvVersion `json:"env_version"`
 }
 
 type UrlLinkResponse struct {
