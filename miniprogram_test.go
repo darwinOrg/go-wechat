@@ -15,13 +15,15 @@ func TestGenerateUrlLink(t *testing.T) {
 		ForceRefresh: false,
 	}
 
-	query := "mobile=3214"
+	path := "sub/interview/pages/direct-interview/sign-up/index"
+	query := "job=10394&expiredAt=xxx"
 	expireInterval := 30
 	params := &wechat.UrlLinkParams{
+		Path:           &path,
 		Query:          &query,
 		ExpireType:     wechat.ExpireTypeInterval,
 		ExpireInterval: &expireInterval,
-		EnvVersion:     wechat.EnvVersionDevelop,
+		EnvVersion:     wechat.EnvVersionTrial,
 	}
 
 	ctx := &dgctx.DgContext{TraceId: "123"}
