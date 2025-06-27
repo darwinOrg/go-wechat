@@ -1,51 +1,67 @@
 package wechat
 
 import (
-	dgctx "github.com/darwinOrg/go-common/context"
-	dghttp "github.com/darwinOrg/go-httpclient"
-	dglogger "github.com/darwinOrg/go-logger"
+	"context"
+	"github.com/silenceper/wechat/v2"
+	"github.com/silenceper/wechat/v2/cache"
+	"github.com/silenceper/wechat/v2/credential"
+	"github.com/silenceper/wechat/v2/miniprogram"
+	"github.com/silenceper/wechat/v2/miniprogram/config"
+	"github.com/silenceper/wechat/v2/miniprogram/urllink"
 )
 
-const (
-	// stableAccessTokenURL 获取稳定版access_token的接口
-	urlLinkURL = "https://api.weixin.qq.com/wxa/generate_urllink?access_token="
-)
+type MiniProgramConfig struct {
+	AppId          string
+	AppSecret      string
+	ExpireInterval int
+	RedisAddr      string
+	EnvVersion     string // 小程序版本：正式版为"release"，体验版为"trial"，开发版为"develop"
+}
 
 type MiniProgramClient struct {
-	AppID        string
-	AppSecret    string
-	ForceRefresh bool
+	miniProgramIns *miniprogram.MiniProgram
+	config         *MiniProgramConfig
 }
 
-type UrlLinkParams struct {
-	Path           *string    `json:"path,omitempty"`
-	Query          *string    `json:"query,omitempty"`
-	ExpireType     ExpireType `json:"expire_type"`
-	ExpireTime     *int64     `json:"expire_time,omitempty"`
-	ExpireInterval *int       `json:"expire_interval,omitempty"`
-	EnvVersion     EnvVersion `json:"env_version"`
+func NewMiniProgramClient(cfg *MiniProgramConfig) *MiniProgramClient {
+	miniCfg := &config.Config{
+		AppID:     cfg.AppId,
+		AppSecret: cfg.AppSecret,
+	}
+	if cfg.RedisAddr != "" {
+		miniCfg.Cache = cache.NewRedis(context.Background(), &cache.RedisOpts{
+			Host: cfg.RedisAddr,
+		})
+	} else {
+		miniCfg.Cache = cache.NewMemory()
+	}
+
+	wx := wechat.NewWechat()
+	miniProgramIns := wx.GetMiniProgram(miniCfg)
+
+	stableAccessTokenHandle := credential.NewStableAccessToken(cfg.AppId, cfg.AppSecret, credential.CacheKeyMiniProgramPrefix, miniCfg.Cache)
+	miniProgramIns.SetAccessTokenHandle(stableAccessTokenHandle)
+
+	return &MiniProgramClient{miniProgramIns: miniProgramIns, config: cfg}
 }
 
-type UrlLinkResponse struct {
-	CommonError
-	UrlLink string `json:"url_link"`
-}
-
-func (c *MiniProgramClient) GenerateUrlLink(ctx *dgctx.DgContext, params *UrlLinkParams) (string, error) {
-	dghttp.SetHttpClient(ctx, dghttp.Client11)
-	tokenResp, err := getStableAccessToken(ctx, c.AppID, c.AppSecret, c.ForceRefresh)
-	if err != nil {
-		return "", err
+func (c *MiniProgramClient) GenerateUrlLink(path string, query string, expireTime int64) (string, error) {
+	ulParams := &urllink.ULParams{
+		EnvVersion: c.config.EnvVersion,
+	}
+	if path != "" {
+		ulParams.Path = path
+	}
+	if query != "" {
+		ulParams.Query = query
+	}
+	if expireTime > 0 {
+		ulParams.ExpireType = urllink.ExpireTypeTime
+		ulParams.ExpireTime = expireTime
+	} else {
+		ulParams.ExpireType = urllink.ExpireTypeInterval
+		ulParams.ExpireInterval = c.config.ExpireInterval
 	}
 
-	resp, err := dghttp.DoPostJsonToStruct[UrlLinkResponse](ctx, urlLinkURL+tokenResp.AccessToken, params, nil)
-	if err != nil {
-		dglogger.Errorf(ctx, "GenerateUrlLink error, params: %+v, err: %v", params, err)
-		return "", err
-	}
-	if !resp.Success() {
-		return "", resp.BuildDgError()
-	}
-
-	return resp.UrlLink, nil
+	return c.miniProgramIns.GetURLLink().Generate(ulParams)
 }
