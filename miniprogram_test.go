@@ -14,8 +14,8 @@ func TestGenerateUrlLink(t *testing.T) {
 		EnvVersion:     "release",
 	})
 
-	path := "sub/interview/pages/direct-interview/sign-up/index"
-	query := "job=10394&expiredAt=xxx"
+	path := "path1/path2/path3"
+	query := "key1=value1&key2=value2"
 	link, err := miniClient.GenerateUrlLink(path, query, 0)
 	if err != nil {
 		panic(err)

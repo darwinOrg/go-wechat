@@ -7,6 +7,7 @@ import (
 	"github.com/silenceper/wechat/v2/credential"
 	"github.com/silenceper/wechat/v2/miniprogram"
 	"github.com/silenceper/wechat/v2/miniprogram/config"
+	"github.com/silenceper/wechat/v2/miniprogram/qrcode"
 	"github.com/silenceper/wechat/v2/miniprogram/urllink"
 )
 
@@ -45,7 +46,7 @@ func NewMiniProgramClient(cfg *MiniProgramConfig) *MiniProgramClient {
 	return &MiniProgramClient{miniProgramIns: miniProgramIns, config: cfg}
 }
 
-func (c *MiniProgramClient) GenerateUrlLink(path string, query string, expireTime int64) (string, error) {
+func (c *MiniProgramClient) GenerateUrlLink(path, query string, expireTime int64) (string, error) {
 	ulParams := &urllink.ULParams{
 		EnvVersion: c.config.EnvVersion,
 	}
@@ -64,4 +65,14 @@ func (c *MiniProgramClient) GenerateUrlLink(path string, query string, expireTim
 	}
 
 	return c.miniProgramIns.GetURLLink().Generate(ulParams)
+}
+
+func (c *MiniProgramClient) GetWXACodeUnlimit(page, scene string, checkPath bool) ([]byte, error) {
+	return c.miniProgramIns.GetQRCode().GetWXACodeUnlimit(qrcode.QRCoder{
+		Page:       page,
+		Path:       page,
+		Scene:      scene,
+		CheckPath:  &checkPath,
+		EnvVersion: c.config.EnvVersion,
+	})
 }
