@@ -2,6 +2,8 @@ package wechat
 
 import (
 	"context"
+	"os"
+
 	"github.com/silenceper/wechat/v2"
 	"github.com/silenceper/wechat/v2/cache"
 	"github.com/silenceper/wechat/v2/credential"
@@ -31,7 +33,9 @@ func NewMiniProgramClient(cfg *MiniProgramConfig) *MiniProgramClient {
 	}
 	if cfg.RedisAddr != "" {
 		miniCfg.Cache = cache.NewRedis(context.Background(), &cache.RedisOpts{
-			Host: cfg.RedisAddr,
+			Host:     cfg.RedisAddr,
+			Username: os.Getenv("REDIS_USERNAME"),
+			Password: os.Getenv("REDIS_PASSWORD"),
 		})
 	} else {
 		miniCfg.Cache = cache.NewMemory()
