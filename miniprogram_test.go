@@ -1,9 +1,10 @@
 package wechat_test
 
 import (
-	"github.com/darwinOrg/go-wechat"
 	"os"
 	"testing"
+
+	"github.com/darwinOrg/go-wechat"
 )
 
 func TestGenerateUrlLink(t *testing.T) {
