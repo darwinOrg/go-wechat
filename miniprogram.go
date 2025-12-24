@@ -71,6 +71,14 @@ func (c *MiniProgramClient) GenerateUrlLink(path, query string, expireTime int64
 	return c.miniProgramIns.GetURLLink().Generate(ulParams)
 }
 
+func (c *MiniProgramClient) GenerateShortLink(pageUrl, pageTitle string, permanent bool) (string, error) {
+	if permanent {
+		return c.miniProgramIns.GetShortLink().GenerateShortLinkPermanent(pageUrl, pageTitle)
+	}
+
+	return c.miniProgramIns.GetShortLink().GenerateShortLinkTemp(pageUrl, pageTitle)
+}
+
 func (c *MiniProgramClient) GetWXACodeUnlimit(page, scene string, checkPath bool) ([]byte, error) {
 	return c.miniProgramIns.GetQRCode().GetWXACodeUnlimit(qrcode.QRCoder{
 		Page:       page,
