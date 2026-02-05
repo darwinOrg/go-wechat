@@ -2,8 +2,6 @@ package wechat
 
 import (
 	"context"
-	"fmt"
-	"net/url"
 	"os"
 	"strings"
 
@@ -23,9 +21,9 @@ type WorkwxConfig struct {
 
 // WorkwxClient 企业微信客户端
 type WorkwxClient struct {
-	workwxApp *workwx.WorkwxApp
-	config    *WorkwxConfig
-	cache     cache.Cache
+	workwxApp           *workwx.WorkwxApp
+	config              *WorkwxConfig
+	accessTokenProvider workwx.ITokenProvider
 }
 
 // NewWorkwxClient 创建企业微信客户端
@@ -44,15 +42,16 @@ func NewWorkwxClient(cfg *WorkwxConfig) *WorkwxClient {
 		myCache = cache.NewMemory()
 	}
 
-	opts = append(opts, workwx.WithAccessTokenProvider(NewWorkwxAccessTokenProvider(myCache)))
+	accessTokenProvider := NewWorkwxAccessTokenProvider(myCache)
+	opts = append(opts, workwx.WithAccessTokenProvider(accessTokenProvider))
 
 	wx := workwx.New(cfg.CorpID, opts...)
 	workwxApp := wx.WithApp(cfg.AgentSecret, cfg.AgentID)
 
 	return &WorkwxClient{
-		workwxApp: workwxApp,
-		config:    cfg,
-		cache:     myCache,
+		workwxApp:           workwxApp,
+		config:              cfg,
+		accessTokenProvider: accessTokenProvider,
 	}
 }
 
@@ -163,16 +162,4 @@ func buildRecipient(toUser, toParty, toTag string) *workwx.Recipient {
 	}
 
 	return recipient
-}
-
-// ParseWorkwxCallbackURL 解析回调URL参数
-// 用于手动处理回调URL验证（不使用HTTPHandler时）
-func ParseWorkwxCallbackURL(rawURL string) (msgSignature, timestamp, nonce, echostr string, err error) {
-	u, err := url.Parse(rawURL)
-	if err != nil {
-		return "", "", "", "", fmt.Errorf("解析URL失败: %w", err)
-	}
-
-	query := u.Query()
-	return query.Get("msg_signature"), query.Get("timestamp"), query.Get("nonce"), query.Get("echostr"), nil
 }
