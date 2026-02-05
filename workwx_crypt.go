@@ -2,7 +2,6 @@ package wechat
 
 import (
 	"bytes"
-	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/sha1"
@@ -54,12 +53,7 @@ func (c *WorkwxClient) VerifyURL(msgSignature, timestamp, nonce, echostr string)
 
 // calSignature 计算签名
 func (c *WorkwxClient) calSignature(timestamp, nonce, data string) string {
-	accessToken, _ := c.accessTokenProvider.GetToken(context.Background())
-	if accessToken == "" {
-		accessToken = "QDG6eK"
-	}
-
-	sortArr := []string{accessToken, timestamp, nonce, data}
+	sortArr := []string{c.config.Token, timestamp, nonce, data}
 	sort.Strings(sortArr)
 	var buffer bytes.Buffer
 	for _, value := range sortArr {
@@ -87,7 +81,7 @@ func (c *WorkwxClient) pKCS7Unpadding(plaintext []byte, blockSize int) ([]byte, 
 
 // cbcDecrypter CBC 解密
 func (c *WorkwxClient) cbcDecrypter(base64EncryptMsg string) ([]byte, *CryptError) {
-	aesKey, err := base64.StdEncoding.DecodeString(c.config.EncodingAESKey)
+	aesKey, err := base64.StdEncoding.DecodeString(c.config.EncodingAESKey + "=")
 	if err != nil {
 		return nil, newCryptError(DecodeBase64Error, err.Error())
 	}
