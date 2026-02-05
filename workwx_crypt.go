@@ -19,6 +19,13 @@ const (
 	DecodeBase64Error      int = -40010
 )
 
+type WorkwxCryptRequest struct {
+	MsgSignature string `json:"msg_Signature" form:"msg_signature"`
+	Timestamp    string `json:"timestamp" form:"timestamp"`
+	Nonce        string `json:"nonce" form:"nonce"`
+	Echostr      string `json:"echostr" form:"echostr"`
+}
+
 // CryptError 企业微信加解密错误
 type CryptError struct {
 	ErrCode int
