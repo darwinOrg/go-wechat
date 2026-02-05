@@ -13,12 +13,12 @@ import (
 
 // WorkwxConfig 企业微信配置
 type WorkwxConfig struct {
-	CorpID         string // 企业ID
-	AgentID        int64  // 应用ID
-	AgentSecret    string // 应用Secret
-	Token          string // 回调Token
-	EncodingAESKey string // 回调加解密Key
-	RedisAddr      string // Redis地址，可选
+	CorpID         string `json:"corpId" mapstructure:"corpId"`                 // 企业ID
+	AgentID        int64  `json:"agentId" mapstructure:"agentId"`               // 应用ID
+	AgentSecret    string `json:"agentSecret" mapstructure:"agentSecret"`       // 应用Secret
+	Token          string `json:"token" mapstructure:"token"`                   // 回调Token
+	EncodingAESKey string `json:"encodingAESKey" mapstructure:"encodingAESKey"` // 回调加解密Key
+	RedisAddr      string `json:"redisAddr" mapstructure:"redisAddr"`           // Redis地址，可选
 }
 
 // WorkwxClient 企业微信客户端
