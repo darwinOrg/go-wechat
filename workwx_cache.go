@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/silenceper/wechat/v2/cache"
@@ -12,11 +13,13 @@ import (
 )
 
 type workwxAccessTokenProvider struct {
-	cache      cache.Cache
-	keyPrefix  string
 	corpID     string
 	secret     string
+	tokenUrl   string
+	cache      cache.Cache
+	cacheKey   string
 	httpClient *http.Client
+	mu         sync.Mutex
 }
 
 // getTokenResponse 企业微信获取 access_token 响应
@@ -30,10 +33,11 @@ type getTokenResponse struct {
 // NewWorkwxAccessTokenProvider 创建基于 cache.Cache 的 AccessToken 提供者
 func NewWorkwxAccessTokenProvider(corpID, secret string, cache cache.Cache) workwx.ITokenProvider {
 	return &workwxAccessTokenProvider{
-		cache:     cache,
-		keyPrefix: "workwx:access_token:",
-		corpID:    corpID,
-		secret:    secret,
+		corpID:   corpID,
+		secret:   secret,
+		tokenUrl: fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=%s&corpsecret=%s", corpID, secret),
+		cache:    cache,
+		cacheKey: "workwx:access_token:" + secret,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -42,16 +46,25 @@ func NewWorkwxAccessTokenProvider(corpID, secret string, cache cache.Cache) work
 
 // GetToken 获取 access_token
 // 优先从缓存获取，如果缓存中没有，则从企业微信 API 获取
+// 使用锁避免并发重复请求企业微信 API
 func (p *workwxAccessTokenProvider) GetToken(_ context.Context) (string, error) {
-	key := p.keyPrefix + p.secret
-
-	// 先从缓存获取
-	rt := p.cache.Get(key)
+	// 先从缓存获取（无锁，快速路径）
+	rt := p.cache.Get(p.cacheKey)
 	if val, ok := rt.(string); ok && val != "" {
 		return val, nil
 	}
 
-	// 缓存中没有，从企业微信 API 获取
+	// 缓存中没有，加锁获取
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	// 双重检查：可能在等待锁时，其他 goroutine 已经获取并缓存了 token
+	rt = p.cache.Get(p.cacheKey)
+	if val, ok := rt.(string); ok && val != "" {
+		return val, nil
+	}
+
+	// 从企业微信 API 获取
 	token, expiresIn, err := p.fetchAccessToken()
 	if err != nil {
 		return "", fmt.Errorf("获取 access_token 失败: %w", err)
@@ -63,7 +76,7 @@ func (p *workwxAccessTokenProvider) GetToken(_ context.Context) (string, error) 
 		expiration = time.Minute // 至少缓存1分钟
 	}
 
-	if err := p.cache.Set(key, token, expiration); err != nil {
+	if err := p.cache.Set(p.cacheKey, token, expiration); err != nil {
 		// 设置缓存失败不影响返回 token
 		return token, nil
 	}
@@ -73,9 +86,7 @@ func (p *workwxAccessTokenProvider) GetToken(_ context.Context) (string, error) 
 
 // fetchAccessToken 从企业微信 API 获取 access_token
 func (p *workwxAccessTokenProvider) fetchAccessToken() (string, int, error) {
-	url := fmt.Sprintf("https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid=%s&corpsecret=%s", p.corpID, p.secret)
-
-	resp, err := p.httpClient.Get(url)
+	resp, err := p.httpClient.Get(p.tokenUrl)
 	if err != nil {
 		return "", 0, fmt.Errorf("请求企业微信 API 失败: %w", err)
 	}
