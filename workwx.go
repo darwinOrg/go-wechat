@@ -42,7 +42,7 @@ func NewWorkwxClient(cfg *WorkwxConfig) *WorkwxClient {
 		myCache = cache.NewMemory()
 	}
 
-	accessTokenProvider := NewWorkwxAccessTokenProvider(myCache)
+	accessTokenProvider := NewWorkwxAccessTokenProvider(cfg.CorpID, cfg.AgentSecret, myCache)
 	opts = append(opts, workwx.WithAccessTokenProvider(accessTokenProvider))
 
 	wx := workwx.New(cfg.CorpID, opts...)
